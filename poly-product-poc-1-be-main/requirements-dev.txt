@@ -1,0 +1,3 @@
+-r requirements.txt
+pytest
+# httpx is already in requirements.txt (used by the learnings client + TestClient)

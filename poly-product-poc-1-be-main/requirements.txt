@@ -1,0 +1,10 @@
+openai
+pinecone
+pymongo
+pdfplumber
+fastapi
+uvicorn
+python-multipart
+python-dotenv
+httpx
+groq
