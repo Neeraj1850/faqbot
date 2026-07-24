@@ -1,5 +1,6 @@
 import axios, { AxiosError, AxiosResponse, InternalAxiosRequestConfig } from 'axios';
 import { toast } from 'sonner';
+import { clearToken, getToken } from '@/lib/tokenStorage';
 
 // Create axios instance with defaults
 const api = axios.create({
@@ -7,16 +8,17 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
-    'x-api-key': import.meta.env.VITE_APP_API_KEY
   },
   timeout: 80000, // 30 second timeout
 });
 
-// Request interceptor for logging/auth
+// Request interceptor: attach bearer token
 api.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    // You could add auth tokens here
-    // config.headers.Authorization = `Bearer ${token}`;
+    const token = getToken();
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
     return config;
   },
   (error: AxiosError) => {
@@ -44,6 +46,12 @@ api.interceptors.response.use(
           break;
         case 401:
           toast.error('Unauthorized', { description: 'Please log in to continue' });
+          if (!error.config?.url?.includes('/auth/login') && !error.config?.url?.includes('/auth/register')) {
+            clearToken();
+            if (window.location.pathname !== '/login') {
+              window.location.assign('/login');
+            }
+          }
           break;
         case 403:
           toast.error('Forbidden', { description: 'You do not have permission' });

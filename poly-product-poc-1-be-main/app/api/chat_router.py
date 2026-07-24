@@ -8,7 +8,7 @@ from app.services import (
     faq_search_service,
 )
 from pydantic import BaseModel
-from app.dependencies.api_key_auth import require_api_key
+from app.dependencies.auth import get_current_user
 
 logger = logging.getLogger(__name__)
 
@@ -29,22 +29,23 @@ class Message(BaseModel):
 
 class ChatRequest(BaseModel):
     query: str
-    # Who this conversation is for. Required: it decides whose personal
-    # learnings are loaded and who a new personal learning belongs to.
-    entity_id: str
     # Optional earlier turns from the chatbox, giving the learning judge context.
     messages: list[Message] | None = None
 
 
 @router.post("/query")
-def chat_query(req: ChatRequest, auth=Depends(require_api_key)):
+def chat_query(req: ChatRequest, current_user: dict = Depends(get_current_user)):
     """Handle one user message end to end.
 
     Retrieve learnings -> detect intent -> (refuse | persist) -> fetch FAQ source
     -> build the answer. Every external call is fail-open, so a broken
     dependency degrades the answer instead of failing the request.
     """
-    logger.info("Chat query received: %r (entity_id=%s)", req.query, req.entity_id)
+    # Who this conversation is for: it decides whose personal learnings are
+    # loaded and who a new personal learning belongs to. It always comes from
+    # the bearer token, so a user can only ever read and write their own.
+    entity_id = current_user["id"]
+    logger.info("Chat query received: %r (entity_id=%s)", req.query, entity_id)
 
     # The conversation we hand to the learnings service: earlier turns (if the
     # frontend sent any) plus the message the user just typed.
@@ -52,7 +53,7 @@ def chat_query(req: ChatRequest, auth=Depends(require_api_key)):
     conversation.append({"role": "user", "content": req.query})
 
     # --- Step 1: load this user's learnings (personal + global) in one call ---
-    personal_learnings, global_learnings = learnings_api.list_learnings(req.entity_id)
+    personal_learnings, global_learnings = learnings_api.list_learnings(entity_id)
     logger.info(
         "Learnings retrieved: %d personal, %d global",
         len(personal_learnings),
@@ -75,7 +76,7 @@ def chat_query(req: ChatRequest, auth=Depends(require_api_key)):
     persisted = None
     if intent["has_a_learning"]:
         logger.info("Message contains a learning, persisting it")
-        persisted = learnings_api.persist(conversation, entity_id=req.entity_id)
+        persisted = learnings_api.persist(conversation, entity_id=entity_id)
         logger.info("Persist result: %s", persisted)
 
     # --- Step 5: fetch FAQ source data, only when the answer needs it ---

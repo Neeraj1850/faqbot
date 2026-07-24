@@ -1,7 +1,9 @@
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { BookOpen, Settings, MessageCircle } from 'lucide-react';
+import { BookOpen, Settings, MessageCircle, LogOut } from 'lucide-react';
 import logo from '@/assets/logo.png';
+import { useAuth } from '@/context/AuthContext';
+import { Button } from '@/components/ui/button';
 
 const navItems = [
   { path: '/', label: 'FAQs', icon: BookOpen },
@@ -11,6 +13,13 @@ const navItems = [
 
 export const AppHeader = () => {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
 
   return (
     <header className="sticky top-0 z-50 glass border-b">
@@ -54,6 +63,15 @@ export const AppHeader = () => {
             );
           })}
         </nav>
+
+        {user && (
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-muted-foreground hidden sm:block">{user.email}</span>
+            <Button variant="ghost" size="icon" onClick={handleLogout} title="Log out">
+              <LogOut className="w-4 h-4" />
+            </Button>
+          </div>
+        )}
       </div>
     </header>
   );

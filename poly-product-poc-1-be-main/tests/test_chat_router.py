@@ -36,9 +36,9 @@ def calls():
 def client(monkeypatch, calls):
     app = FastAPI()
     app.include_router(cr.router)
-    from app.dependencies.api_key_auth import require_api_key
+    from app.dependencies.auth import get_current_user
 
-    app.dependency_overrides[require_api_key] = lambda: True
+    app.dependency_overrides[get_current_user] = lambda: {"id": "test-user", "email": "test@example.com"}
 
     # Default wiring: no learnings, FAQ returns one item.
     monkeypatch.setattr(learnings_api, "list_learnings", lambda entity_id: ([], []))
@@ -67,7 +67,7 @@ def client(monkeypatch, calls):
 def test_normal_path_uses_rewritten_query(client, monkeypatch, calls):
     monkeypatch.setattr(intent_service, "detect_intent", lambda q, p, g: _intent())
 
-    resp = client.post("/chat/query", json={"query": "orig question", "entity_id": "acme"})
+    resp = client.post("/chat/query", json={"query": "orig question"})
     assert resp.status_code == 200
     body = resp.json()
     assert body["message"] == "the answer"
@@ -78,9 +78,27 @@ def test_normal_path_uses_rewritten_query(client, monkeypatch, calls):
     assert calls["persist"] == 0
 
 
-def test_entity_id_is_required(client):
-    resp = client.post("/chat/query", json={"query": "no entity id here"})
-    assert resp.status_code == 422
+def test_entity_id_comes_from_the_logged_in_user(client, monkeypatch):
+    monkeypatch.setattr(intent_service, "detect_intent", lambda q, p, g: _intent(has_a_learning=True))
+    seen = {}
+
+    def fake_list(entity_id):
+        seen["listed"] = entity_id
+        return ([], [])
+
+    monkeypatch.setattr(learnings_api, "list_learnings", fake_list)
+
+    def fake_persist(messages, entity_id=None):
+        seen["persisted"] = entity_id
+        return None
+
+    monkeypatch.setattr(learnings_api, "persist", fake_persist)
+
+    resp = client.post("/chat/query", json={"query": "a question"})
+    assert resp.status_code == 200
+    # The client never sends an entity id; it always comes from the token.
+    assert seen["listed"] == "test-user"
+    assert seen["persisted"] == "test-user"
 
 
 @pytest.mark.parametrize("flag", ["is_abusive", "out_of_scope"])
@@ -90,7 +108,7 @@ def test_refusal_skips_persist_and_faq(client, monkeypatch, calls, flag):
         lambda q, p, g: _intent(**{flag: True, "has_a_learning": True}),
     )
 
-    resp = client.post("/chat/query", json={"query": "bad message", "entity_id": "acme"})
+    resp = client.post("/chat/query", json={"query": "bad message"})
     assert resp.status_code == 200
     body = resp.json()
     assert body["message"] == cr.REFUSAL_MESSAGE
@@ -106,8 +124,7 @@ def test_persists_when_message_has_a_learning(client, monkeypatch, calls):
         intent_service, "detect_intent", lambda q, p, g: _intent(has_a_learning=True)
     )
 
-    resp = client.post("/chat/query", json={"query": "remember: SVGs means savings",
-                                            "entity_id": "acme"})
+    resp = client.post("/chat/query", json={"query": "remember: SVGs means savings"})
     assert resp.status_code == 200
     assert calls["persist"] == 1
     assert resp.json()["persisted"]["learning_id"] == "id-1"
@@ -118,7 +135,7 @@ def test_skips_faq_when_source_data_not_needed(client, monkeypatch, calls):
         intent_service, "detect_intent", lambda q, p, g: _intent(needs_source_data=False)
     )
 
-    resp = client.post("/chat/query", json={"query": "thanks!", "entity_id": "acme"})
+    resp = client.post("/chat/query", json={"query": "thanks!"})
     assert resp.status_code == 200
     assert calls["faq_query"] is None  # FAQ search never called
     assert resp.json()["results"] == []
@@ -142,7 +159,7 @@ def test_both_scopes_reach_intent_and_prompt(client, monkeypatch, calls):
 
     monkeypatch.setattr(intent_service, "detect_intent", fake_detect)
 
-    resp = client.post("/chat/query", json={"query": "a question", "entity_id": "acme"})
+    resp = client.post("/chat/query", json={"query": "a question"})
     assert resp.status_code == 200
     assert len(seen["personal"]) == 1
     assert len(seen["global"]) == 1
@@ -164,7 +181,6 @@ def test_history_is_included_in_conversation(client, monkeypatch, calls):
 
     client.post("/chat/query", json={
         "query": "and remember that",
-        "entity_id": "acme",
         "messages": [{"role": "user", "content": "earlier turn"}],
     })
     # Prior turns plus the current message are sent to the learnings judge.

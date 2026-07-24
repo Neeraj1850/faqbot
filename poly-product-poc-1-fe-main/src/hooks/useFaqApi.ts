@@ -133,6 +133,8 @@ export const useDeleteFaq = () => {
 };
 
 // Hook for chat query
+// The backend derives the entity id from the bearer token, so the client only
+// ever sends the query itself.
 export const useChatQuery = () => {
   return useMutation({
     mutationFn: chatApi.query,

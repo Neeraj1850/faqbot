@@ -12,6 +12,11 @@ class Settings:
     PINECONE_NAMESPACE = ""
     EMBEDDING_MODEL = "text-embedding-3-small"
 
+    # JWT — signs the tokens handed out by /auth/login and /auth/register.
+    JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY")
+    JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
+    JWT_EXPIRE_MINUTES = int(os.getenv("JWT_EXPIRE_MINUTES", "1440"))
+
     # polynomial-learnings (two-tier HTTP integration). All optional: when
     # LEARNINGS_BASE_URL is empty the learning module is fully disabled and both
     # retrieval and persistence become no-ops, so the bot behaves exactly as before.
