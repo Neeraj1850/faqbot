@@ -44,7 +44,9 @@ def search_faqs(query: str) -> list[dict]:
         embedding = EmbeddingService.embed_question(query)
         logger.info("FAQ step 1 OK: embedding length %d", len(embedding))
     except Exception:
-        logger.exception("FAQ step 1 FAILED: could not embed the query (check OPENAI_API_KEY)")
+        logger.exception(
+            "FAQ step 1 FAILED: could not embed the query (check OPENAI_API_KEY)"
+        )
         return []
 
     try:
@@ -52,7 +54,9 @@ def search_faqs(query: str) -> list[dict]:
         matches = VectorService.query(embedding)
         logger.info("FAQ step 2 OK: Pinecone returned %d matches", len(matches))
     except Exception:
-        logger.exception("FAQ step 2 FAILED: Pinecone query error (check PINECONE_API_KEY/INDEX)")
+        logger.exception(
+            "FAQ step 2 FAILED: Pinecone query error (check PINECONE_API_KEY/INDEX)"
+        )
         return []
 
     try:
@@ -61,7 +65,9 @@ def search_faqs(query: str) -> list[dict]:
         faq_docs = FAQService.get_by_ids(faq_ids)
         logger.info("FAQ step 3 OK: Mongo returned %d documents", len(faq_docs))
     except Exception:
-        logger.exception("FAQ step 3 FAILED: Mongo lookup error (check MONGO_URI/DB_NAME)")
+        logger.exception(
+            "FAQ step 3 FAILED: Mongo lookup error (check MONGO_URI/DB_NAME)"
+        )
         return []
 
     return _shape_for_frontend(faq_docs)

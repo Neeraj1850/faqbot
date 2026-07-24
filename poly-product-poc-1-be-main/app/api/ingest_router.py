@@ -4,6 +4,7 @@ from app.dependencies.auth import get_current_user
 
 router = APIRouter(prefix="/ingest")
 
+
 @router.post("/pdf")
 async def ingest_pdf(file: UploadFile, current_user: dict = Depends(get_current_user)):
     pdf_bytes = await file.read()

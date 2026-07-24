@@ -27,6 +27,7 @@ const App = () => (
             <Route path="/" element={<ProtectedRoute><FaqViewPage /></ProtectedRoute>} />
             <Route path="/manage" element={<ProtectedRoute><FaqManagePage /></ProtectedRoute>} />
             <Route path="/chat" element={<ProtectedRoute><ChatPage /></ProtectedRoute>} />
+            <Route path="/chat/:conversationId" element={<ProtectedRoute><ChatPage /></ProtectedRoute>} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

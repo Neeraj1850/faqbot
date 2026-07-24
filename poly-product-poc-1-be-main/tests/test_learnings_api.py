@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import httpx
-import pytest
 
 from app.services import learnings_api
 
@@ -32,14 +31,20 @@ def _patch_post(monkeypatch, handler):
 
 # -- list_learnings --------------------------------------------------------
 
+
 def test_list_learnings_returns_both_scopes(monkeypatch):
     def handler(request):
         assert request.url.path == "/v1/agents/faqbot/learnings"
         assert request.url.params["entity_id"] == "acme"
-        return httpx.Response(200, json={
-            "personal": [{"context": "user prefers tables", "content": "answer in a table"}],
-            "global": [{"context": "fiscal year", "content": "starts in April"}],
-        })
+        return httpx.Response(
+            200,
+            json={
+                "personal": [
+                    {"context": "user prefers tables", "content": "answer in a table"}
+                ],
+                "global": [{"context": "fiscal year", "content": "starts in April"}],
+            },
+        )
 
     _patch_get(monkeypatch, handler)
     personal, global_ = learnings_api.list_learnings("acme")
@@ -70,10 +75,13 @@ def test_list_learnings_noop_when_disabled(monkeypatch):
 
 # -- format_block ----------------------------------------------------------
 
+
 def test_format_block_renders_learnings():
-    block = learnings_api.format_block([
-        {"context": "user asks about refunds", "content": "refunds take 5-7 days"},
-    ])
+    block = learnings_api.format_block(
+        [
+            {"context": "user asks about refunds", "content": "refunds take 5-7 days"},
+        ]
+    )
     assert "Relevant learnings from past interactions:" in block
     assert "refunds take 5-7 days" in block
 
@@ -84,16 +92,24 @@ def test_format_block_empty():
 
 # -- persist ---------------------------------------------------------------
 
+
 def test_persist_returns_result_on_success(monkeypatch):
     def handler(request):
         assert request.url.path == "/v1/agents/faqbot/persist"
         return httpx.Response(
-            200, json={"decision": "persisted", "verdict": "new", "learning_id": "abc-123"}
+            200,
+            json={"decision": "persisted", "verdict": "new", "learning_id": "abc-123"},
         )
 
     _patch_post(monkeypatch, handler)
-    result = learnings_api.persist([{"role": "user", "content": "a correction"}], entity_id="acme")
-    assert result == {"decision": "persisted", "verdict": "new", "learning_id": "abc-123"}
+    result = learnings_api.persist(
+        [{"role": "user", "content": "a correction"}], entity_id="acme"
+    )
+    assert result == {
+        "decision": "persisted",
+        "verdict": "new",
+        "learning_id": "abc-123",
+    }
 
 
 def test_persist_maps_error_to_none(monkeypatch):
@@ -101,7 +117,10 @@ def test_persist_maps_error_to_none(monkeypatch):
         return httpx.Response(503, json={"detail": "no judge configured"})
 
     _patch_post(monkeypatch, handler)
-    assert learnings_api.persist([{"role": "user", "content": "x"}], entity_id="acme") is None
+    assert (
+        learnings_api.persist([{"role": "user", "content": "x"}], entity_id="acme")
+        is None
+    )
 
 
 def test_persist_noop_when_disabled(monkeypatch):

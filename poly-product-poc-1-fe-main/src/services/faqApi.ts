@@ -12,9 +12,27 @@ export interface ApiFaq {
 }
 
 export interface ChatQueryResponse {
+  conversation_id: string | null;
   query: string;
   results: ApiFaq[];
   message?: string;
+}
+
+export interface ApiConversation {
+  id: string;
+  user_id: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ApiMessage {
+  id: string;
+  conversation_id: string;
+  user_id: string;
+  role: "user" | "agent";
+  content: string;
+  source: string;
+  timestamp: string;
 }
 
 export interface IngestResponse {
@@ -61,13 +79,29 @@ export const faqApi = {
 
 // Chat API endpoints
 export const chatApi = {
-  // POST /chat/query - Query for relevant FAQs
-  query: async (query: string): Promise<ChatQueryResponse> => {
-    const response = await api.post<ChatQueryResponse>('/chat/query', { query });
+  // POST /chat/query - Query for relevant FAQs. Omit conversationId to start
+  // a new chat (the backend creates one); pass one back to continue it.
+  query: async (query: string, conversationId?: string | null): Promise<ChatQueryResponse> => {
+    const response = await api.post<ChatQueryResponse>('/chat/query', {
+      query,
+      conversation_id: conversationId ?? null,
+    });
     return {
       ...response.data,
       results: response.data.results.map(transformFaq),
     };
+  },
+
+  // GET /chat/conversations - This user's conversations, most recent first.
+  listConversations: async (): Promise<ApiConversation[]> => {
+    const response = await api.get<ApiConversation[]>('/chat/conversations');
+    return response.data;
+  },
+
+  // GET /chat/conversations/:id/messages - Full history for one conversation.
+  getMessages: async (conversationId: string): Promise<ApiMessage[]> => {
+    const response = await api.get<ApiMessage[]>(`/chat/conversations/${conversationId}/messages`);
+    return response.data;
   },
 };
 

@@ -47,7 +47,9 @@ def list_learnings(entity_id: str) -> tuple[list[dict], list[dict]]:
 
     params = {"entity_id": entity_id, "limit": settings.LEARNINGS_LIST_LIMIT}
     try:
-        resp = httpx.get(_url("/learnings"), params=params, timeout=settings.LEARNINGS_TIMEOUT)
+        resp = httpx.get(
+            _url("/learnings"), params=params, timeout=settings.LEARNINGS_TIMEOUT
+        )
         resp.raise_for_status()
         body = resp.json()
         return body.get("personal", []), body.get("global", [])
@@ -78,7 +80,9 @@ def persist(messages: list[dict], entity_id: str | None = None) -> dict | None:
 
     payload = {"messages": messages, "entity_id": entity_id}
     try:
-        resp = httpx.post(_url("/persist"), json=payload, timeout=settings.LEARNINGS_TIMEOUT)
+        resp = httpx.post(
+            _url("/persist"), json=payload, timeout=settings.LEARNINGS_TIMEOUT
+        )
         resp.raise_for_status()
         return resp.json()
     except Exception as exc:

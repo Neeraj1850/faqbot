@@ -1,6 +1,7 @@
 import pdfplumber
 from io import BytesIO
 
+
 def parse_pdf_qa(pdf_bytes: bytes):
     faq_pairs = []
     with pdfplumber.open(BytesIO(pdf_bytes)) as pdf:
@@ -20,9 +21,7 @@ def parse_pdf_qa(pdf_bytes: bytes):
                 answer_lines.append(line)
         answer = " ".join(answer_lines).strip()
 
-        faq_pairs.append({
-            "section": current_section,
-            "question": question,
-            "answer": answer
-        })
+        faq_pairs.append(
+            {"section": current_section, "question": question, "answer": answer}
+        )
     return faq_pairs

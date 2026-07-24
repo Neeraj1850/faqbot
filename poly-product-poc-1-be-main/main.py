@@ -26,7 +26,7 @@ origins = [
     "http://127.0.0.1:8080",
     "http://localhost:8082",
     "http://127.0.0.1:8082",
-    "https://purple-sea-0b1db0900.4.azurestaticapps.net"
+    "https://purple-sea-0b1db0900.4.azurestaticapps.net",
 ]
 
 app.add_middleware(

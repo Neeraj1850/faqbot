@@ -1,9 +1,12 @@
 from app.core.pinecone_client import get_index
 from app.core.config import settings
 
+
 class VectorService:
     @staticmethod
-    def upsert_faq(faq_id: str, question: str, section: str, answer: str, embedding: list[float]):
+    def upsert_faq(
+        faq_id: str, question: str, section: str, answer: str, embedding: list[float]
+    ):
         get_index().upsert(
             vectors=[
                 {
@@ -13,11 +16,11 @@ class VectorService:
                         "faq_id": faq_id,
                         "question": question,
                         "answer": answer,
-                        "section": section
-                    }
+                        "section": section,
+                    },
                 }
             ],
-            namespace=settings.PINECONE_NAMESPACE
+            namespace=settings.PINECONE_NAMESPACE,
         )
 
     @staticmethod
@@ -26,6 +29,6 @@ class VectorService:
             vector=text_embedding,
             top_k=top_k,
             include_metadata=True,
-            namespace=settings.PINECONE_NAMESPACE
+            namespace=settings.PINECONE_NAMESPACE,
         )
         return resp.matches

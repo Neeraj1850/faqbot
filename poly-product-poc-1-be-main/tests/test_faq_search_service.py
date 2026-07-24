@@ -18,21 +18,36 @@ def _match(faq_id: str):
 @pytest.fixture
 def stub_steps(monkeypatch):
     """Wire up a working happy path; individual tests override a single step."""
-    monkeypatch.setattr(faq_search.EmbeddingService, "embed_question", staticmethod(lambda q: [0.1, 0.2]))
-    monkeypatch.setattr(faq_search.VectorService, "query", staticmethod(lambda emb: [_match("abc")]))
     monkeypatch.setattr(
-        faq_search.FAQService, "get_by_ids",
-        staticmethod(lambda ids: [
-            {"_id": "abc", "section": "Billing", "question": "Q?", "answer": "A."}
-        ]),
+        faq_search.EmbeddingService,
+        "embed_question",
+        staticmethod(lambda q: [0.1, 0.2]),
+    )
+    monkeypatch.setattr(
+        faq_search.VectorService, "query", staticmethod(lambda emb: [_match("abc")])
+    )
+    monkeypatch.setattr(
+        faq_search.FAQService,
+        "get_by_ids",
+        staticmethod(
+            lambda ids: [
+                {"_id": "abc", "section": "Billing", "question": "Q?", "answer": "A."}
+            ]
+        ),
     )
 
 
 def test_happy_path_returns_shaped_items(stub_steps):
     items = faq_search.search_faqs("how do refunds work?")
     assert items == [
-        {"id": "abc", "section": "Billing", "question": "Q?", "answer": "A.",
-         "created_at": None, "updated_at": None}
+        {
+            "id": "abc",
+            "section": "Billing",
+            "question": "Q?",
+            "answer": "A.",
+            "created_at": None,
+            "updated_at": None,
+        }
     ]
 
 
@@ -40,7 +55,9 @@ def test_embedding_failure_returns_empty(stub_steps, monkeypatch):
     def boom(q):
         raise RuntimeError("no OPENAI_API_KEY")
 
-    monkeypatch.setattr(faq_search.EmbeddingService, "embed_question", staticmethod(boom))
+    monkeypatch.setattr(
+        faq_search.EmbeddingService, "embed_question", staticmethod(boom)
+    )
     assert faq_search.search_faqs("anything") == []
 
 

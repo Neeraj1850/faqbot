@@ -1,3 +1,16 @@
 .env
 /env
 CLAUDE.md
+
+.venv/
+
+# Python cache and temporary files
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# IDE directories
+.vscode/
+.idea/
+.DS_Store

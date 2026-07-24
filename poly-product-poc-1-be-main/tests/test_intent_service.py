@@ -7,7 +7,6 @@ import sys
 import types
 from unittest.mock import MagicMock
 
-import pytest
 
 from app.core.config import settings
 from app.services import intent_service
@@ -28,17 +27,24 @@ def _install_fake_groq(monkeypatch, content: str):
 
 
 def test_parses_all_five_fields(monkeypatch):
-    _install_fake_groq(monkeypatch, json.dumps({
-        "needs_source_data": True,
-        "is_abusive": False,
-        "out_of_scope": False,
-        "rewritten_query": "HOW MANY savings ACCOUNTS WERE OPENED LAST MONTH",
-        "has_a_learning": False,
-        "learning_reason": "this is a question, not a teaching statement",
-    }))
+    _install_fake_groq(
+        monkeypatch,
+        json.dumps(
+            {
+                "needs_source_data": True,
+                "is_abusive": False,
+                "out_of_scope": False,
+                "rewritten_query": "HOW MANY savings ACCOUNTS WERE OPENED LAST MONTH",
+                "has_a_learning": False,
+                "learning_reason": "this is a question, not a teaching statement",
+            }
+        ),
+    )
     result = intent_service.detect_intent(
         "HOW MANY SVGS ACCOUNTS WERE OPENED LAST MONTH",
-        personal_learnings=[{"context": "user says SVGs", "content": "SVGs means savings"}],
+        personal_learnings=[
+            {"context": "user says SVGs", "content": "SVGs means savings"}
+        ],
         global_learnings=[],
     )
     assert result["needs_source_data"] is True
@@ -50,14 +56,26 @@ def test_parses_all_five_fields(monkeypatch):
 
 
 def test_learnings_are_sent_in_the_prompt(monkeypatch):
-    client = _install_fake_groq(monkeypatch, json.dumps({
-        "needs_source_data": True, "is_abusive": False, "out_of_scope": False,
-        "rewritten_query": "q", "has_a_learning": False,
-    }))
+    client = _install_fake_groq(
+        monkeypatch,
+        json.dumps(
+            {
+                "needs_source_data": True,
+                "is_abusive": False,
+                "out_of_scope": False,
+                "rewritten_query": "q",
+                "has_a_learning": False,
+            }
+        ),
+    )
     intent_service.detect_intent(
         "how many SVGs?",
-        personal_learnings=[{"context": "user says SVGs", "content": "SVGs means savings"}],
-        global_learnings=[{"context": "account code", "content": "code is #UnoSavings"}],
+        personal_learnings=[
+            {"context": "user says SVGs", "content": "SVGs means savings"}
+        ],
+        global_learnings=[
+            {"context": "account code", "content": "code is #UnoSavings"}
+        ],
     )
     sent = client.chat.completions.create.call_args.kwargs["messages"][1]["content"]
     assert "SVGs means savings" in sent
@@ -65,10 +83,18 @@ def test_learnings_are_sent_in_the_prompt(monkeypatch):
 
 
 def test_abusive_and_out_of_scope_flags(monkeypatch):
-    _install_fake_groq(monkeypatch, json.dumps({
-        "needs_source_data": False, "is_abusive": True, "out_of_scope": True,
-        "rewritten_query": "", "has_a_learning": False,
-    }))
+    _install_fake_groq(
+        monkeypatch,
+        json.dumps(
+            {
+                "needs_source_data": False,
+                "is_abusive": True,
+                "out_of_scope": True,
+                "rewritten_query": "",
+                "has_a_learning": False,
+            }
+        ),
+    )
     result = intent_service.detect_intent("something rude")
     assert result["is_abusive"] is True
     assert result["out_of_scope"] is True

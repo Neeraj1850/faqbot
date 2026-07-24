@@ -1,16 +1,24 @@
 import { useState, useRef, useEffect } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { MessageCircle, Sparkles, Loader2 } from "lucide-react";
-import { useFaqs, useChatQuery, useLocalSearch } from "@/hooks/useFaqApi";
+import { useFaqs, useChatQuery, useLocalSearch, useConversationMessages, conversationKeys } from "@/hooks/useFaqApi";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { ChatMessageBubble } from "@/components/chat/ChatMessageBubble";
 import { ChatInput } from "@/components/chat/ChatInput";
+import { ConversationSidebar } from "@/components/chat/ConversationSidebar";
 import { ChatMessage, FAQ } from "@/types/faq";
 import { FaqDrawer } from "@/components/faq/Faqdrawer";
 const ChatPage = () => {
+  const { conversationId } = useParams<{ conversationId?: string }>();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+
   const { data: faqs } = useFaqs();
   const chatMutation = useChatQuery();
   const localSearch = useLocalSearch(faqs);
+  const historyQuery = useConversationMessages(conversationId);
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState("");
@@ -24,6 +32,25 @@ const ChatPage = () => {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // New chat (no conversationId in the URL) starts empty; opening an older
+  // one hydrates local state from its stored history once it arrives.
+  useEffect(() => {
+    if (!conversationId) {
+      setMessages([]);
+      return;
+    }
+    if (historyQuery.data) {
+      setMessages(
+        historyQuery.data.map((m) => ({
+          id: m.id,
+          role: m.role === "agent" ? "assistant" : "user",
+          content: m.content,
+          timestamp: new Date(m.timestamp),
+        }))
+      );
+    }
+  }, [conversationId, historyQuery.data]);
 
   const handleSend = async () => {
     if (!inputValue.trim() || chatMutation.isPending) return;
@@ -41,7 +68,7 @@ const ChatPage = () => {
 
     try {
       // Try API first
-      const response = await chatMutation.mutateAsync(query);
+      const response = await chatMutation.mutateAsync({ query, conversationId });
 
       const assistantMessage: ChatMessage = {
         id: crypto.randomUUID(),
@@ -52,6 +79,13 @@ const ChatPage = () => {
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
+
+      // First turn of a new chat: the backend just created a conversation.
+      // Adopt its id into the URL and refresh the sidebar so it shows up.
+      if (!conversationId && response.conversation_id) {
+        queryClient.invalidateQueries({ queryKey: conversationKeys.list() });
+        navigate(`/chat/${response.conversation_id}`, { replace: true });
+      }
     } catch (error) {
       // Fallback to local search if API fails
       const localResults = localSearch(query);
@@ -83,7 +117,10 @@ const ChatPage = () => {
 
   return (
     <AppLayout>
-      <div className="max-w-3xl mx-auto h-[calc(100vh-10rem)] flex flex-col">
+      <div className="flex flex-col md:flex-row gap-6 max-w-6xl mx-auto">
+        <ConversationSidebar />
+
+        <div className="flex-1 min-w-0 h-[calc(100vh-10rem)] flex flex-col">
         {/* Chat Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -193,6 +230,7 @@ const ChatPage = () => {
           onSend={handleSend}
           isLoading={chatMutation.isPending}
         />
+        </div>
       </div>
     </AppLayout>
   );

@@ -5,7 +5,6 @@ from app.core.security import hash_password, verify_password
 
 
 class UserService:
-
     @staticmethod
     def get_by_email(email: str):
         return user_collection.find_one({"email": email})

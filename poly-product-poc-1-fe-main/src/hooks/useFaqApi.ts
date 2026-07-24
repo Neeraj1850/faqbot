@@ -134,10 +134,35 @@ export const useDeleteFaq = () => {
 
 // Hook for chat query
 // The backend derives the entity id from the bearer token, so the client only
-// ever sends the query itself.
+// ever sends the query (and, once one exists, the conversation id) itself.
 export const useChatQuery = () => {
   return useMutation({
-    mutationFn: chatApi.query,
+    mutationFn: ({ query, conversationId }: { query: string; conversationId?: string | null }) =>
+      chatApi.query(query, conversationId),
+  });
+};
+
+// Query keys for conversation history (sidebar support)
+export const conversationKeys = {
+  all: ['conversations'] as const,
+  list: () => [...conversationKeys.all, 'list'] as const,
+  messages: (conversationId: string) => [...conversationKeys.all, 'messages', conversationId] as const,
+};
+
+// Hook for the sidebar's list of past conversations
+export const useConversations = () => {
+  return useQuery({
+    queryKey: conversationKeys.list(),
+    queryFn: chatApi.listConversations,
+  });
+};
+
+// Hook for loading one conversation's message history (opening an older chat)
+export const useConversationMessages = (conversationId: string | undefined) => {
+  return useQuery({
+    queryKey: conversationKeys.messages(conversationId ?? ''),
+    queryFn: () => chatApi.getMessages(conversationId as string),
+    enabled: !!conversationId,
   });
 };
 

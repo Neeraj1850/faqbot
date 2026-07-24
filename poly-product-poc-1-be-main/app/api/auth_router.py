@@ -13,7 +13,9 @@ def register(req: UserCreate):
     try:
         user_id = UserService.create_user(req.email, req.password)
     except ValueError:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email already registered")
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail="Email already registered"
+        )
 
     token = create_access_token({"sub": user_id, "email": req.email})
     return Token(access_token=token)
@@ -23,7 +25,10 @@ def register(req: UserCreate):
 def login(req: UserLogin):
     user = UserService.authenticate(req.email, req.password)
     if not user:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect email or password")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect email or password",
+        )
 
     token = create_access_token({"sub": str(user["_id"]), "email": user["email"]})
     return Token(access_token=token)
