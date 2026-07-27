@@ -74,8 +74,44 @@ def test_format_block_renders_learnings():
     block = learnings_api.format_block([
         {"context": "user asks about refunds", "content": "refunds take 5-7 days"},
     ])
-    assert "Relevant learnings from past interactions:" in block
+    assert "most recent first" in block
     assert "refunds take 5-7 days" in block
+
+
+def test_format_block_orders_newest_first():
+    """The most recently created learning must appear before older ones."""
+    block = learnings_api.format_block([
+        {"context": "old", "content": "OLD PREFERENCE", "created_at": "2026-07-01T00:00:00Z"},
+        {"context": "new", "content": "NEW PREFERENCE", "created_at": "2026-07-24T00:00:00Z"},
+    ])
+    assert block.index("NEW PREFERENCE") < block.index("OLD PREFERENCE")
+
+
+def test_format_block_handles_missing_created_at():
+    """Learnings without a timestamp still render without error."""
+    block = learnings_api.format_block([
+        {"context": "no date", "content": "undated learning"},
+    ])
+    assert "undated learning" in block
+
+
+def test_format_block_keeps_all_learnings_newest_first():
+    """All learnings are kept (none dropped); the newest is listed first so the
+    model can prefer it while still honouring the others where they coexist."""
+    block = learnings_api.format_block([
+        {"context": "c", "content": "answer in a table",
+         "category": "formatting", "created_at": "2026-07-01T00:00:00Z"},
+        {"context": "c", "content": "answer in ALL CAPS",
+         "category": "formatting", "created_at": "2026-07-24T00:00:00Z"},
+        {"context": "c", "content": "address me as Boss",
+         "category": "address", "created_at": "2026-07-10T00:00:00Z"},
+    ])
+    # Nothing is dropped.
+    assert "answer in ALL CAPS" in block
+    assert "answer in a table" in block
+    assert "address me as Boss" in block
+    # Newest is listed before the older ones.
+    assert block.index("answer in ALL CAPS") < block.index("answer in a table")
 
 
 def test_format_block_empty():

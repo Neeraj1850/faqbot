@@ -21,6 +21,10 @@ REFUSAL_MESSAGE = (
     "products and services — feel free to ask me one of those."
 )
 
+# Shown when the user only teaches the bot something (a preference or fact)
+# without asking a question, so we confirm instead of trying to answer.
+LEARNING_ACK_MESSAGE = "Got it — I'll keep that in mind for my answers."
+
 
 class Message(BaseModel):
     role: str
@@ -78,6 +82,14 @@ def chat_query(req: ChatRequest, current_user: dict = Depends(get_current_user))
         logger.info("Message contains a learning, persisting it")
         persisted = learnings_api.persist(conversation, entity_id=entity_id)
         logger.info("Persist result: %s", persisted)
+
+    # When the message only teaches something (a preference or fact) and asks
+    # nothing, acknowledge it instead of trying to answer from the FAQ — that
+    # path would wrongly say "I don't have that information" for a statement.
+    if intent["has_a_learning"] and not intent["needs_source_data"]:
+        return _build_response(req, intent, faq_items=[], persisted=persisted,
+                               learnings=(personal_learnings, global_learnings),
+                               message=LEARNING_ACK_MESSAGE)
 
     # --- Step 5: fetch FAQ source data, only when the answer needs it ---
     faq_items = []

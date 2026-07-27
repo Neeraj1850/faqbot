@@ -1,5 +1,7 @@
 import { motion } from "framer-motion";
 import { FAQ } from "@/types/faq";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 interface ChatMessageBubbleProps {
   role: "user" | "assistant";
@@ -35,9 +37,24 @@ export const ChatMessageBubble = ({
         `}
       >
         {/* Message text */}
-        <p className="text-sm leading-relaxed whitespace-pre-line">
-          {content}
-        </p>
+        <ReactMarkdown
+            remarkPlugins={[remarkGfm]}
+            components={{
+              table: ({ children }) => (
+                <table className="w-full border-collapse border border-gray-300">{children}</table>
+              ),
+              th: ({ children }) => (
+                <th className="border border-gray-300 bg-gray-100 px-4 py-2 text-left">
+                  {children}
+                </th>
+              ),
+              td: ({ children }) => (
+                <td className="border border-gray-300 px-4 py-2">{children}</td>
+              ),
+            }}
+          >
+            {content}
+          </ReactMarkdown>
 
         {/* FAQ Carousel for assistant */}
         {role === "assistant" && faqs && faqs.length > 0 && (

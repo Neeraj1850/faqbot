@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { MessageCircle, Sparkles, Loader2 } from "lucide-react";
+import ReactMarkdown from 'react-markdown'
 import { useFaqs, useChatQuery, useLocalSearch } from "@/hooks/useFaqApi";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { ChatMessageBubble } from "@/components/chat/ChatMessageBubble";

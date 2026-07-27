@@ -1,3 +1,5 @@
 -r requirements.txt
 pytest
 # httpx is already in requirements.txt (used by the learnings client + TestClient)
+# reportlab powers scripts/generate_polynomial_pdfs.py (authoring the sample FAQ PDFs).
+reportlab

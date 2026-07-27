@@ -42,8 +42,12 @@ Field meanings:
   false for greetings, thanks, or messages that only state a preference/fact.
 - is_abusive: true if the message is offensive, hateful, or harassing.
 - out_of_scope: true if the message is unrelated to the product/FAQ domain.
+  Greetings, thanks, and other small talk are NOT out_of_scope — set false for them.
 - rewritten_query: expand abbreviations and jargon using the learnings. If no
-  rewrite is needed, repeat the original question.
+  rewrite is needed, repeat the original question. IMPORTANT: "Polynomial AI"
+  (often written just "polynomial") is the name of the product/company this bot
+  supports. Never reinterpret it as the mathematical term "polynomial(s)"; keep
+  the product meaning and preserve the name as "Polynomial AI".
 
 - has_a_learning: judge ONLY the user's latest message, using these rules:
   * A QUESTION IS NEVER A LEARNING, even when it asks about a fact. Asking
@@ -120,6 +124,11 @@ def detect_intent(
             ],
             temperature=0.0,
             response_format={"type": "json_object"},
+            # Reasoning model: keep effort low and cap tokens so it doesn't burn
+            # the whole budget thinking and return empty content (which would
+            # fall back to the default intent).
+            reasoning_effort="low",
+            max_completion_tokens=1024,
         )
         answer = json.loads(completion.choices[0].message.content)
     except Exception as exc:  # missing dep, network, bad JSON — all non-fatal

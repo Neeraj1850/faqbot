@@ -1,6 +1,6 @@
 from bson import ObjectId
 
-from app.core.mongo import user_collection
+from app.core.mongo import ensure_indexes, user_collection
 from app.core.security import hash_password, verify_password
 
 
@@ -20,6 +20,9 @@ class UserService:
 
     @staticmethod
     def create_user(email: str, password: str) -> str:
+        # Make sure the unique-email index exists before the first insert, so
+        # duplicate registrations are rejected by the database too.
+        ensure_indexes()
         if UserService.get_by_email(email):
             raise ValueError("Email already registered")
 

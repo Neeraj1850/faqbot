@@ -18,7 +18,7 @@ def _match(faq_id: str):
 @pytest.fixture
 def stub_steps(monkeypatch):
     """Wire up a working happy path; individual tests override a single step."""
-    monkeypatch.setattr(faq_search.EmbeddingService, "embed_question", staticmethod(lambda q: [0.1, 0.2]))
+    monkeypatch.setattr(faq_search.EmbeddingService, "embed_question", staticmethod(lambda q, is_query=False: [0.1, 0.2]))
     monkeypatch.setattr(faq_search.VectorService, "query", staticmethod(lambda emb: [_match("abc")]))
     monkeypatch.setattr(
         faq_search.FAQService, "get_by_ids",
@@ -37,8 +37,8 @@ def test_happy_path_returns_shaped_items(stub_steps):
 
 
 def test_embedding_failure_returns_empty(stub_steps, monkeypatch):
-    def boom(q):
-        raise RuntimeError("no OPENAI_API_KEY")
+    def boom(q, is_query=False):
+        raise RuntimeError("local embedding model failed to load")
 
     monkeypatch.setattr(faq_search.EmbeddingService, "embed_question", staticmethod(boom))
     assert faq_search.search_faqs("anything") == []

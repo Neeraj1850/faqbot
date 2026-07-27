@@ -1,7 +1,7 @@
 """Shared test setup.
 
-The bot's data-access layer imports heavy third-party clients (openai / pinecone
-/ pymongo) at module load, which aren't needed to test the learning integration.
+The bot's data-access layer imports third-party clients (pinecone / pymongo) at
+module load, which aren't needed to test the learning integration.
 They're stubbed with lightweight mocks so the router module imports without those
 packages installed.
 """
@@ -27,8 +27,9 @@ def _stub(name: str) -> None:
         sys.modules[name] = mod
 
 
-# Heavy clients the learning integration does not exercise.
-for _mod in ("openai", "pinecone", "pdfplumber"):
+# Clients the learning integration does not exercise. The Gemini SDK is
+# imported lazily inside the embedding module, so it needs no stub here.
+for _mod in ("pinecone", "pdfplumber"):
     _stub(_mod)
 
 # pymongo / bson need a couple of concrete symbols the modules reference.

@@ -1,6 +1,8 @@
-openai
 pinecone
+# Google Gemini embeddings (gemini-embedding-001), used in place of OpenAI.
+google-genai
 pymongo
+certifi
 pdfplumber
 fastapi
 uvicorn

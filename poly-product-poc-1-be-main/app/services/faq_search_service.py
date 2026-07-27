@@ -1,6 +1,6 @@
 """Search the FAQ knowledge base ("Fetch Source" in the system design).
 
-Three steps: embed the query (OpenAI) -> find similar FAQs (Pinecone) -> load the
+Three steps: embed the query (local model) -> find similar FAQs (Pinecone) -> load the
 full documents (Mongo). Each step logs before and after, so when something is
 misconfigured the console shows exactly which stage broke instead of a single
 vague warning.
@@ -41,10 +41,10 @@ def search_faqs(query: str) -> list[dict]:
     """Find FAQ entries relevant to ``query``. Returns [] if anything fails."""
     try:
         logger.info("FAQ step 1: embedding query: %s", query)
-        embedding = EmbeddingService.embed_question(query)
+        embedding = EmbeddingService.embed_question(query, is_query=True)
         logger.info("FAQ step 1 OK: embedding length %d", len(embedding))
     except Exception:
-        logger.exception("FAQ step 1 FAILED: could not embed the query (check OPENAI_API_KEY)")
+        logger.exception("FAQ step 1 FAILED: could not embed the query (local embedding model)")
         return []
 
     try:

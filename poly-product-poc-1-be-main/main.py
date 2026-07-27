@@ -5,7 +5,6 @@ from app.api.faq_router import router as faq_router
 from app.api.chat_router import router as chat_router
 from app.api.ingest_router import router as ingest_router
 from app.api.auth_router import router as auth_router
-from app.core.mongo import ensure_indexes
 from fastapi.middleware.cors import CORSMiddleware
 
 # Show INFO-level logs from our app modules (e.g. intent detection). Without
@@ -14,12 +13,6 @@ from fastapi.middleware.cors import CORSMiddleware
 logging.basicConfig(level=logging.INFO)
 
 app = FastAPI()
-
-
-@app.on_event("startup")
-def on_startup():
-    ensure_indexes()
-
 
 origins = [
     "http://localhost:8080",

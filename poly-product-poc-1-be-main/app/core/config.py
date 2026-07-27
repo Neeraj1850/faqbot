@@ -4,13 +4,16 @@ from dotenv import load_dotenv
 load_dotenv()
 
 class Settings:
-    OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
     PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
     MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017")
     DB_NAME = os.getenv("DB_NAME", "faq_db")
     PINECONE_INDEX = os.getenv("PINECONE_INDEX", "faqbot")
     PINECONE_NAMESPACE = ""
-    EMBEDDING_MODEL = "text-embedding-3-small"
+    # Google Gemini embeddings (free tier). gemini-embedding-001 is configured
+    # to output 1536-dim vectors to match the existing Pinecone index.
+    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+    EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "gemini-embedding-001")
+    EMBEDDING_DIMENSIONS = int(os.getenv("EMBEDDING_DIMENSIONS", "1536"))
 
     # JWT — signs the tokens handed out by /auth/login and /auth/register.
     JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY")

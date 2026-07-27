@@ -57,12 +57,38 @@ def list_learnings(entity_id: str) -> tuple[list[dict], list[dict]]:
 
 
 def format_block(learnings: list[dict]) -> str:
-    """Render learnings as a short block to drop into the LLM prompt."""
+    """Render learnings as a short block to drop into the LLM prompt.
+
+    Learnings are ordered newest first and ALL of them are included. The header
+    tells the model to treat the most recent preference as top priority while
+    still honouring every other preference that can coexist with it, and to skip
+    an older one only when it directly conflicts with a more recent one.
+    ``created_at`` is an ISO-8601 UTC string, so a plain reverse sort on it is
+    chronological; items without a date sort to the bottom.
+    """
     if not learnings:
         return ""
-    lines = ["Relevant learnings from past interactions:"]
-    for item in learnings:
-        lines.append(f"- When {item['context']}: {item['content']}")
+
+    newest_first = sorted(
+        learnings,
+        key=lambda item: item.get("created_at", ""),
+        reverse=True,
+    )
+
+    lines = [
+        "Apply the following user preferences, listed most recent first. Treat "
+        "the most recent one as the top priority, and also honour every other "
+        "preference that can reasonably coexist with it and is relevant to the "
+        "question. Only skip an older preference when it directly conflicts with "
+        "a more recent one (for example two mutually exclusive response "
+        "formats); in that case follow the more recent one:"
+    ]
+    for item in newest_first:
+        # Show just the date (not the time) as a light recency hint; fall back
+        # to no prefix when the learning has no timestamp.
+        created_at = item.get("created_at", "")
+        date_hint = f"({created_at[:10]}) " if created_at else ""
+        lines.append(f"- {date_hint}When {item['context']}: {item['content']}")
     return "\n".join(lines)
 
 

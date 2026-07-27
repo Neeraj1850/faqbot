@@ -1,3 +1,5 @@
 .env
 /env
+/data
+/scripts
 CLAUDE.md
