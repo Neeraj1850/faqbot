@@ -28,6 +28,7 @@ def _conversation_out(doc: dict) -> dict:
     return {
         "id": str(doc["_id"]),
         "user_id": doc["user_id"],
+        "title": doc.get("title"),
         "created_at": doc["created_at"],
         "updated_at": doc["updated_at"],
     }
@@ -50,7 +51,7 @@ class ConversationService:
     def create_conversation(user_id: str) -> dict:
         """Start a new conversation for ``user_id``. Returns the conversation."""
         now = _now()
-        doc = {"user_id": user_id, "created_at": now, "updated_at": now}
+        doc = {"user_id": user_id, "title": None, "created_at": now, "updated_at": now}
         doc["_id"] = conversation_collection.insert_one(doc).inserted_id
         return _conversation_out(doc)
 
@@ -79,10 +80,14 @@ class ConversationService:
     ) -> dict:
         """Append a message to an existing, owned conversation.
 
+        The conversation's title is set once, from the first user message
+        (truncated), and never overwritten afterwards.
+
         Raises ``ValueError`` if the conversation doesn't exist or belongs
         to a different user — callers convert this to a 404.
         """
-        if ConversationService.get_conversation(conversation_id, user_id) is None:
+        existing = ConversationService.get_conversation(conversation_id, user_id)
+        if existing is None:
             raise ValueError(f"conversation not found: {conversation_id}")
 
         now = _now()
@@ -97,9 +102,14 @@ class ConversationService:
         doc["_id"] = message_collection.insert_one(doc).inserted_id
 
         # Bump the parent so "list conversations, most recent first" reflects
-        # actual activity, not just when the conversation was first created.
+        # actual activity, and set its title from the first user message —
+        # `existing` is already fetched above for the ownership check, so
+        # deciding whether a title is still needed costs no extra query.
+        update = {"updated_at": now}
+        if role == "user" and not existing.get("title"):
+            update["title"] = content[:60]
         conversation_collection.update_one(
-            {"_id": ObjectId(conversation_id)}, {"$set": {"updated_at": now}}
+            {"_id": ObjectId(conversation_id)}, {"$set": update}
         )
         return _message_out(doc)
 

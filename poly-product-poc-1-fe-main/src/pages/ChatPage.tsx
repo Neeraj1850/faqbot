@@ -2,18 +2,38 @@ import { useState, useRef, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
-import { MessageCircle, Sparkles, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { useFaqs, useChatQuery, useLocalSearch, useConversationMessages, conversationKeys } from "@/hooks/useFaqApi";
+import { useAuth } from "@/context/AuthContext";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { ChatMessageBubble } from "@/components/chat/ChatMessageBubble";
 import { ChatInput } from "@/components/chat/ChatInput";
 import { ConversationSidebar } from "@/components/chat/ConversationSidebar";
 import { ChatMessage, FAQ } from "@/types/faq";
 import { FaqDrawer } from "@/components/faq/Faqdrawer";
+
+const SUGGESTIONS = [
+  "Polynomial vs Traditional Bots",
+  "Multimodal Interfaces",
+  "Deployments",
+  "LLMs",
+];
+
+const displayNameFromEmail = (email?: string) => {
+  if (!email) return "there";
+  const local = email.split("@")[0].replace(/[._-]+/g, " ").trim();
+  if (!local) return "there";
+  return local
+    .split(" ")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+};
+
 const ChatPage = () => {
   const { conversationId } = useParams<{ conversationId?: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   const { data: faqs } = useFaqs();
   const chatMutation = useChatQuery();
@@ -115,57 +135,38 @@ const ChatPage = () => {
     setDrawerOpen(true);
   };
 
+  const isEmpty = messages.length === 0;
+
   return (
     <AppLayout>
       <div className="flex flex-col md:flex-row gap-6 max-w-6xl mx-auto">
         <ConversationSidebar />
 
         <div className="flex-1 min-w-0 h-[calc(100vh-10rem)] flex flex-col">
-        {/* Chat Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-6"
-        >
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-accent text-accent-foreground text-sm font-medium mb-4">
-            <Sparkles className="w-4 h-4" />
-            Semantic FAQ Search
-          </div>
-          <h1 className="text-3xl font-bold text-foreground mb-2">
-            How can we help?
-          </h1>
-          <p className="text-muted-foreground">
-            Ask a question and we'll find the most relevant answers
-          </p>
-        </motion.div>
-
-        {/* Messages Area */}
-        <div className="flex-1 overflow-y-auto px-2 mb-4">
-          {messages.length === 0 ? (
+          {isEmpty ? (
+            // Fresh chat: centered greeting + centered input, Gemini-style —
+            // no bottom-pinned bar, no badge, until the first message lands.
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="h-full flex flex-col items-center justify-center text-center"
+              className="flex-1 flex flex-col items-center justify-center px-4"
             >
-              <div className="w-16 h-16 rounded-2xl gradient-secondary flex items-center justify-center mb-4">
-                <MessageCircle className="w-8 h-8 text-secondary-foreground" />
-              </div>
-              <h3 className="text-lg font-semibold text-foreground mb-2">
-                Start a conversation
-              </h3>
-              <p className="text-muted-foreground max-w-sm">
-                Type your question below and we'll search our knowledge base for
-                relevant answers.
-              </p>
+              <h1 className="text-3xl md:text-4xl font-semibold text-foreground mb-8 text-center">
+                What's next, {displayNameFromEmail(user?.email)}?
+              </h1>
 
-              {/* Suggested Questions */}
-              <div className="mt-8 flex flex-wrap justify-center gap-2">
-                {[
-                  "Polynomial vs Traditional Bots",
-                  "Multimodal Interfaces",
-                  "Deployments",
-                  "LLMs",
-                ].map((suggestion) => (
+              <div className="w-full max-w-2xl">
+                <ChatInput
+                  ref={inputRef}
+                  value={inputValue}
+                  onChange={setInputValue}
+                  onSend={handleSend}
+                  isLoading={chatMutation.isPending}
+                />
+              </div>
+
+              <div className="mt-6 flex flex-wrap justify-center gap-2 max-w-2xl">
+                {SUGGESTIONS.map((suggestion) => (
                   <button
                     key={suggestion}
                     onClick={() => {
@@ -180,56 +181,60 @@ const ChatPage = () => {
               </div>
             </motion.div>
           ) : (
-            <div className="space-y-4 py-4">
-              <AnimatePresence>
-                {messages.map((message, index) => (
-                  <ChatMessageBubble
-                    key={message.id}
-                    role={message.role}
-                    content={message.content}
-                    faqs={message.faqs}
-                    index={index}
-                    onSelectFaq={handleSelectFaq}
+            <>
+              {/* Messages Area */}
+              <div className="flex-1 overflow-y-auto px-2 mb-4">
+                <div className="space-y-4 py-4">
+                  <AnimatePresence>
+                    {messages.map((message, index) => (
+                      <ChatMessageBubble
+                        key={message.id}
+                        role={message.role}
+                        content={message.content}
+                        faqs={message.faqs}
+                        index={index}
+                        onSelectFaq={handleSelectFaq}
+                      />
+                    ))}
+                  </AnimatePresence>
+
+                  {chatMutation.isPending && (
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="flex justify-start"
+                    >
+                      <div className="bg-card border border-border rounded-2xl rounded-bl-md px-4 py-3 shadow-soft-sm">
+                        <div className="flex items-center gap-2">
+                          <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                          <span className="text-sm text-muted-foreground">
+                            Searching knowledge base...
+                          </span>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+
+                  <div ref={messagesEndRef} />
+                </div>
+              </div>
+
+              {/* Chat Input — bottom-pinned bar, unchanged from before */}
+              <div className="glass border-t p-4">
+                <div className="max-w-3xl mx-auto">
+                  <ChatInput
+                    ref={inputRef}
+                    value={inputValue}
+                    onChange={setInputValue}
+                    onSend={handleSend}
+                    isLoading={chatMutation.isPending}
                   />
-                ))}
-              </AnimatePresence>
-
-              {chatMutation.isPending && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="flex justify-start"
-                >
-                  <div className="bg-card border border-border rounded-2xl rounded-bl-md px-4 py-3 shadow-soft-sm">
-                    <div className="flex items-center gap-2">
-                      <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
-                      <span className="text-sm text-muted-foreground">
-                        Searching knowledge base...
-                      </span>
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-
-              <div ref={messagesEndRef} />
-            </div>
+                </div>
+              </div>
+            </>
           )}
-        </div>
 
-        <FaqDrawer
-          faq={selectedFaq}
-          open={drawerOpen}
-          onClose={() => setDrawerOpen(false)}
-        />
-
-        {/* Chat Input */}
-        <ChatInput
-          ref={inputRef}
-          value={inputValue}
-          onChange={setInputValue}
-          onSend={handleSend}
-          isLoading={chatMutation.isPending}
-        />
+          <FaqDrawer faq={selectedFaq} open={drawerOpen} onClose={() => setDrawerOpen(false)} />
         </div>
       </div>
     </AppLayout>

@@ -6,6 +6,9 @@ from pydantic import BaseModel
 class ConversationOut(BaseModel):
     id: str
     user_id: str
+    # First user message, truncated — set once by add_message() and never
+    # overwritten. None for a conversation that has no messages yet.
+    title: str | None = None
     created_at: datetime
     updated_at: datetime
 
